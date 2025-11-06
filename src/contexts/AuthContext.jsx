@@ -90,7 +90,7 @@ export const AuthContext = createContext()
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState)
 
-  // Cargar datos del localStorage al iniciar
+  // Cargar datos del localStorage al iniciar - SOLO UNA VEZ al montar
   useEffect(() => {
     const loadStoredAuth = () => {
       try {
@@ -104,12 +104,13 @@ export const AuthProvider = ({ children }) => {
               type: 'LOGIN_SUCCESS',
               payload: { user, accessToken, refreshToken }
             })
-          } else if (refreshToken) {
-            // Intentar renovar el token
+          } else if (refreshToken && isTokenValid(refreshToken)) {
+            // Intentar renovar el token si el refresh token es válido
             refreshAccessToken(refreshToken)
           } else {
             // Limpiar datos inválidos
             localStorage.removeItem('authData')
+            dispatch({ type: 'LOGOUT' })
           }
         }
       } catch (error) {
@@ -123,6 +124,12 @@ export const AuthProvider = ({ children }) => {
 
   // Guardar en localStorage cuando cambie el estado de auth
   useEffect(() => {
+    console.log('Auth state changed:', {
+      isAuthenticated: state.isAuthenticated,
+      user: state.user,
+      accessToken: state.accessToken
+    })
+
     if (state.isAuthenticated && state.user && state.accessToken) {
       const authData = {
         user: state.user,
@@ -130,8 +137,10 @@ export const AuthProvider = ({ children }) => {
         refreshToken: state.refreshToken
       }
       localStorage.setItem('authData', JSON.stringify(authData))
-    } else {
+      console.log('Saved to localStorage:', authData)
+    } else if (!state.isAuthenticated) {
       localStorage.removeItem('authData')
+      console.log('Removed from localStorage')
     }
   }, [state.isAuthenticated, state.user, state.accessToken, state.refreshToken])
 
@@ -153,39 +162,46 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: 'LOGIN_START' })
 
     try {
-      // credentials = { username, password }
-      console.log(credentials)
+      console.log('Login attempt with:', credentials)
       const response = await apiLogin(
         credentials.username,
         credentials.password
       )
-      console.log(response)
+      console.log('Login response:', response)
 
-      const values = response.data.values // Axios guarda JSON en data
+      const values = response.data.values
+
+      // Crear el payload de usuario
+      const userPayload = {
+        id: values.user.id,
+        username: values.user.username,
+        first_name: values.user.first_name,
+        last_name: values.user.last_name,
+        email: values.user.email,
+        grupo_id: values.user.grupo_id, // ← CORREGIDO: values.user.grupo_id
+        grupo_nombre: values.user.grupo_nombre, // ← CORREGIDO: values.user.grupo_nombre
+        ci: values.user.ci,
+        telefono: values.user.telefono,
+        is_staff: values.user.is_staff,
+        is_active: values.user.is_active
+      }
+
+      const loginPayload = {
+        user: userPayload,
+        accessToken: values.access,
+        refreshToken: values.refresh
+      }
+
+      console.log('Dispatching LOGIN_SUCCESS with:', loginPayload)
 
       dispatch({
         type: 'LOGIN_SUCCESS',
-        payload: {
-          user: {
-            id: values.user.id,
-            username: values.user.username,
-            first_name: values.user.first_name,
-            last_name: values.user.last_name,
-            email: values.user.email,
-            grupo_id: values.usuario.grupo_id,
-            grupo_nombre: values.user.grupo_nombre,
-            ci: values.user.ci,
-            telefono: values.user.telefono,
-            is_staff: values.user.is_staff,
-            is_active: values.user.is_active
-          },
-          accessToken: values.access,
-          refreshToken: values.refresh
-        }
+        payload: loginPayload
       })
 
       return { success: true, data: values }
     } catch (error) {
+      console.error('Login error:', error)
       dispatch({
         type: 'LOGIN_FAILURE',
         payload: error.response?.data?.message || error.message
@@ -196,23 +212,24 @@ export const AuthProvider = ({ children }) => {
       }
     }
   }
-
   // Registro
   const register = async (userData) => {
     dispatch({ type: 'LOGIN_START' })
 
     try {
-      // Envía todo el payload necesario
+      console.log('📝 Datos enviados al registro:', userData)
+
       const response = await apiRegister({
         username: userData.username,
         password: userData.password,
-        password2: userData.password2, // si tu backend lo requiere
+        password2: userData.password2,
         first_name: userData.first_name,
         last_name: userData.last_name,
         email: userData.email,
         telefono: userData.telefono
       })
 
+      console.log('✅ Respuesta del registro:', response)
       const values = response.data.values
 
       dispatch({
@@ -224,7 +241,8 @@ export const AuthProvider = ({ children }) => {
             first_name: values.first_name,
             last_name: values.last_name,
             email: values.email,
-            grupo: values.grupo,
+            grupo_id: values.grupo_id,
+            grupo_nombre: values.grupo_nombre,
             ci: values.ci,
             telefono: values.telefono,
             is_staff: values.is_staff,
@@ -237,13 +255,23 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, data: values }
     } catch (error) {
+      console.log('❌ Error completo del registro:', error)
+      console.log('📋 Respuesta del error:', error.response)
+
+      // Pasar el objeto completo de error para que parseApiError lo procese
+      const errorData =
+        error.response?.data || error.message || 'Error desconocido'
+
+      console.log('📝 Datos de error procesados:', errorData)
+
       dispatch({
         type: 'LOGIN_FAILURE',
-        payload: error.response?.data?.message || error.message
+        payload: errorData
       })
+
       return {
         success: false,
-        error: error.response?.data?.message || error.message
+        error: errorData // ← Pasar el objeto completo, no solo el mensaje
       }
     }
   }

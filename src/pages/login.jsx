@@ -17,50 +17,91 @@ export default function LoginForm() {
     telefono: ''
   })
   const [errors, setErrors] = useState({})
+  const [apiError, setApiError] = useState('')
 
-  const { login, register, loading, error, clearError } = useAuth()
+  const { login, register, loading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = location.state?.from?.pathname || '/dashboard'
+  const from = location.state?.from?.pathname || '/home'
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
 
+    // Limpiar errores cuando el usuario escribe
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }))
     }
-    if (error) clearError()
+    if (apiError) {
+      setApiError('')
+    }
   }
 
   const validateForm = () => {
     const newErrors = {}
 
-    if (!formData.username.trim())
-      newErrors.username = 'El username es requerido'
-
-    if (!formData.password.trim())
-      newErrors.password = 'La contraseña es requerida'
-    else if (!isLogin && formData.password.length < 8)
-      newErrors.password = 'La contraseña debe tener al menos 8 caracteres'
+    if (!formData.username.trim()) newErrors.username = 'Username requerido'
+    if (!formData.password.trim()) newErrors.password = 'Contraseña requerida'
 
     if (!isLogin) {
       if (!formData.first_name.trim()) newErrors.first_name = 'Nombre requerido'
       if (!formData.last_name.trim()) newErrors.last_name = 'Apellido requerido'
-      if (!formData.email.trim()) newErrors.email = 'Correo requerido'
+      if (!formData.email.trim()) newErrors.email = 'Email requerido'
+      else if (!/\S+@\S+\.\S+/.test(formData.email))
+        newErrors.email = 'Email inválido'
       if (!formData.telefono.trim()) newErrors.telefono = 'Teléfono requerido'
       if (!formData.password2.trim())
         newErrors.password2 = 'Confirmar contraseña'
       if (formData.password !== formData.password2)
-        newErrors.password2 = 'No coinciden'
+        newErrors.password2 = 'Las contraseñas no coinciden'
     }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async () => {
-    if (!validateForm()) return
+  const parseApiError = (error) => {
+    if (typeof error === 'string') return error
+
+    if (error && typeof error === 'object') {
+      // Si viene con estructura de Django
+      if (error.errors) {
+        const messages = []
+        for (const [field, fieldErrors] of Object.entries(error.errors)) {
+          if (Array.isArray(fieldErrors)) {
+            messages.push(
+              ...fieldErrors.map((err) => {
+                const fieldName = field.replace(/_/g, ' ')
+                return `${
+                  fieldName.charAt(0).toUpperCase() + fieldName.slice(1)
+                }: ${err}`
+              })
+            )
+          } else if (typeof fieldErrors === 'string') {
+            messages.push(fieldErrors)
+          }
+        }
+        return messages.join(' • ')
+      }
+
+      if (error.message) return error.message
+      if (error.detail) return error.detail
+    }
+
+    return 'Error desconocido'
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+
+    // Resetear errores
+    setApiError('')
+    setErrors({})
+
+    // Validar formulario
+    if (!validateForm()) {
+      return
+    }
 
     const payload = isLogin
       ? { username: formData.username, password: formData.password }
@@ -74,26 +115,30 @@ export default function LoginForm() {
           telefono: formData.telefono
         }
 
-    const result = isLogin ? await login(payload) : await register(payload)
+    try {
+      const result = isLogin ? await login(payload) : await register(payload)
 
-    if (result.success) {
-      navigate(from, { replace: true })
-    } else {
-      // Mostrar errores cortos y legibles
-      if (typeof result.error === 'object') {
-        const messages = Object.values(result.error)
-          .flat()
-          .map((e) => (e?.message ? e.message : e))
-        setErrors({ global: messages.join(' • ') })
+      if (result.success) {
+        navigate(from, { replace: true })
       } else {
-        setErrors({ global: result.error })
+        console.log('❌ Error del servidor:', result.error)
+        const errorMessage = parseApiError(result.error)
+
+        // ESTA ES LA PARTE CRÍTICA - Forzar el update del estado
+        setApiError(errorMessage)
+
+        // Debug: verificar que se actualizó
+        setTimeout(() => {}, 0)
       }
+    } catch (error) {
+      setApiError('Error de conexión')
     }
   }
 
   const toggleMode = () => {
     setIsLogin(!isLogin)
     setErrors({})
+    setApiError('')
     setFormData({
       username: '',
       password: '',
@@ -103,7 +148,6 @@ export default function LoginForm() {
       email: '',
       telefono: ''
     })
-    if (error) clearError()
   }
 
   return (
@@ -122,19 +166,28 @@ export default function LoginForm() {
           </p>
         </div>
 
-        {/* Error global */}
-        {errors.global && (
-          <div className='mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2'>
-            <AlertCircle className='text-red-500 flex-shrink-0' size={20} />
-            <span className='text-red-700 text-sm'>{errors.global}</span>
+        {/* ERROR GLOBAL - Esta es la parte importante */}
+        {apiError && (
+          <div className='mb-6 p-4 bg-red-50 border border-red-200 rounded-lg animate-pulse'>
+            <div className='flex items-start space-x-2'>
+              <AlertCircle
+                className='text-red-500 flex-shrink-0 mt-0.5'
+                size={20}
+              />
+              <div className='flex-1'>
+                <span className='text-red-700 text-sm font-medium block mb-1'>
+                  {isLogin ? 'Error al iniciar sesión' : 'Error en el registro'}
+                </span>
+                <p className='text-red-600 text-sm'>{apiError}</p>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Form */}
-        <div className='space-y-6'>
+        <form onSubmit={handleSubmit} className='space-y-6'>
+          {/* Campos del formulario (igual que antes) */}
           {!isLogin && (
             <>
-              {/* Nombre */}
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Nombre
@@ -165,7 +218,6 @@ export default function LoginForm() {
                 )}
               </div>
 
-              {/* Apellido */}
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Apellido
@@ -196,7 +248,6 @@ export default function LoginForm() {
                 )}
               </div>
 
-              {/* Email */}
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Correo electrónico
@@ -225,7 +276,6 @@ export default function LoginForm() {
                 )}
               </div>
 
-              {/* Teléfono */}
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Teléfono
@@ -256,7 +306,6 @@ export default function LoginForm() {
             </>
           )}
 
-          {/* Username */}
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-2'>
               Nombre de usuario
@@ -285,7 +334,6 @@ export default function LoginForm() {
             )}
           </div>
 
-          {/* Contraseña */}
           <div>
             <label className='block text-sm font-medium text-gray-700 mb-2'>
               Contraseña
@@ -322,7 +370,6 @@ export default function LoginForm() {
             )}
           </div>
 
-          {/* Confirmar contraseña (solo registro) */}
           {!isLogin && (
             <div>
               <label className='block text-sm font-medium text-gray-700 mb-2'>
@@ -353,9 +400,8 @@ export default function LoginForm() {
             </div>
           )}
 
-          {/* Botón */}
           <button
-            onClick={handleSubmit}
+            type='submit'
             disabled={loading}
             className='w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none'
           >
@@ -370,13 +416,13 @@ export default function LoginForm() {
               'Crear Cuenta'
             )}
           </button>
-        </div>
+        </form>
 
-        {/* Toggle login/registro */}
         <div className='mt-6 text-center'>
           <p className='text-gray-600'>
             {isLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}
             <button
+              type='button'
               onClick={toggleMode}
               disabled={loading}
               className='ml-2 text-indigo-600 hover:text-indigo-500 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
