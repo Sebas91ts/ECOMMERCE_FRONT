@@ -74,7 +74,7 @@ const Navbar = () => {
               href='/'
               className='flex-shrink-0 text-3xl font-extrabold text-indigo-600 tracking-tight'
             >
-              E-<span className='text-gray-900'>COMMERCE</span>
+              SMART<span className='text-gray-900'>SALES</span>
             </a>
 
             {/* Enlaces Principales (Escritorio) */}

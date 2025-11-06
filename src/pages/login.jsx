@@ -19,10 +19,19 @@ export default function LoginForm() {
   const [errors, setErrors] = useState({})
   const [apiError, setApiError] = useState('')
 
-  const { login, register, loading } = useAuth()
+  const { login, register, loading, user } = useAuth() // ← Añade user aquí
   const navigate = useNavigate()
   const location = useLocation()
-  const from = location.state?.from?.pathname || '/home'
+
+  // Determinar la ruta por defecto basada en el usuario actual (si existe)
+  const getDefaultRedirect = () => {
+    if (user?.grupo_nombre === 'administrador') {
+      return '/dashboard'
+    }
+    return '/home'
+  }
+
+  const from = location.state?.from?.pathname || getDefaultRedirect()
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -119,16 +128,14 @@ export default function LoginForm() {
       const result = isLogin ? await login(payload) : await register(payload)
 
       if (result.success) {
-        navigate(from, { replace: true })
+        console.log(
+          '✅ Login exitoso - AppRoutes manejará la redirección automáticamente'
+        )
+        // NO navegues aquí - AppRoutes detectará el cambio de estado y redirigirá
       } else {
         console.log('❌ Error del servidor:', result.error)
         const errorMessage = parseApiError(result.error)
-
-        // ESTA ES LA PARTE CRÍTICA - Forzar el update del estado
         setApiError(errorMessage)
-
-        // Debug: verificar que se actualizó
-        setTimeout(() => {}, 0)
       }
     } catch (error) {
       setApiError('Error de conexión')
@@ -184,8 +191,9 @@ export default function LoginForm() {
           </div>
         )}
 
+        {/* Resto del formulario igual... */}
         <form onSubmit={handleSubmit} className='space-y-6'>
-          {/* Campos del formulario (igual que antes) */}
+          {/* ... todo el resto del código del formulario igual ... */}
           {!isLogin && (
             <>
               <div>
