@@ -128,9 +128,6 @@ export default function LoginForm() {
       const result = isLogin ? await login(payload) : await register(payload)
 
       if (result.success) {
-        console.log(
-          '✅ Login exitoso - AppRoutes manejará la redirección automáticamente'
-        )
         // NO navegues aquí - AppRoutes detectará el cambio de estado y redirigirá
       } else {
         console.log('❌ Error del servidor:', result.error)

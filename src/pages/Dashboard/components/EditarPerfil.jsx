@@ -88,8 +88,6 @@ export default function EditarPerfil() {
       delete dataToSend.password
     }
 
-    console.log('📤 Enviando datos:', dataToSend)
-
     const result = await execute(dataToSend)
 
     if (result?.data?.status === 1) {

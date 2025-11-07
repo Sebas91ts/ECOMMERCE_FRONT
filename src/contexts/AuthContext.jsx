@@ -137,10 +137,8 @@ export const AuthProvider = ({ children }) => {
         refreshToken: state.refreshToken
       }
       localStorage.setItem('authData', JSON.stringify(authData))
-      console.log('Saved to localStorage:', authData)
     } else if (!state.isAuthenticated) {
       localStorage.removeItem('authData')
-      console.log('Removed from localStorage')
     }
   }, [state.isAuthenticated, state.user, state.accessToken, state.refreshToken])
 
@@ -162,12 +160,10 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: 'LOGIN_START' })
 
     try {
-      console.log('Login attempt with:', credentials)
       const response = await apiLogin(
         credentials.username,
         credentials.password
       )
-      console.log('Login response:', response)
 
       const values = response.data.values
 
@@ -192,8 +188,6 @@ export const AuthProvider = ({ children }) => {
         refreshToken: values.refresh
       }
 
-      console.log('Dispatching LOGIN_SUCCESS with:', loginPayload)
-
       dispatch({
         type: 'LOGIN_SUCCESS',
         payload: loginPayload
@@ -217,8 +211,6 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: 'LOGIN_START' })
 
     try {
-      console.log('📝 Datos enviados al registro:', userData)
-
       const response = await apiRegister({
         username: userData.username,
         password: userData.password,
@@ -229,7 +221,6 @@ export const AuthProvider = ({ children }) => {
         telefono: userData.telefono
       })
 
-      console.log('✅ Respuesta del registro:', response)
       const values = response.data.values
 
       dispatch({

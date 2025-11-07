@@ -7,7 +7,6 @@ import UserAvatar from './components/UserAvatar'
 export default function CondominioSmartDashboard() {
   // Datos simulados para el dashboard
   const { user } = useAuth()
-  console.log('Usuario', user)
   return (
     <div className='min-h-screen bg-gray-50 flex'>
       {/* Sidebar */}
