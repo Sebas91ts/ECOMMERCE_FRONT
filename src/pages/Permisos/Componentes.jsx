@@ -148,7 +148,7 @@ export default function Componentes() {
 
       {/* Modal para Crear/Editar */}
       {showModal && (
-        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50'>
+        <div className='fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50'>
           <div className='bg-white rounded-2xl p-6 w-full max-w-md'>
             <h2 className='text-xl font-bold mb-4'>
               {modalType === 'crear' ? 'Crear Componente' : 'Editar Componente'}
