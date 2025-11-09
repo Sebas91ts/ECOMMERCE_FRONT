@@ -4,7 +4,7 @@ import Sidebar from './components/Sidebar'
 import { useAuth } from '../../hooks/useAuth'
 import UserAvatar from './components/UserAvatar'
 
-export default function CondominioSmartDashboard() {
+export default function SmartSalesDashboard() {
   // Datos simulados para el dashboard
   const { user } = useAuth()
   return (

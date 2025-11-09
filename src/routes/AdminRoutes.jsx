@@ -5,7 +5,10 @@ import EditarPerfil from '../pages/Dashboard/components/EditarPerfil'
 import Grupos from '../pages/Permisos/Grupos'
 import Privilegios from '../pages/Permisos/Privilegios'
 import Componentes from '../pages/Permisos/Componentes'
-
+import CategoryManager from '../pages/Categorias/CategoryManager'
+import SubcategoryManager from '../pages/Categorias/SubcategoryManager'
+import ProductManager from '../pages/Productos/ProductManager'
+import MarcaManager from '../pages/Marcas/MarcaManager'
 export default function AdminRoutes() {
   return (
     <Routes>
@@ -22,6 +25,13 @@ export default function AdminRoutes() {
         <Route path='permisos/grupos' element={<Grupos />} />
         <Route path='permisos/privilegios' element={<Privilegios />} />
         <Route path='permisos/componentes' element={<Componentes />} />
+        {/* CATEGORIAS */}
+        <Route path='categorias' element={<CategoryManager />} />
+        <Route path='subcategorias' element={<SubcategoryManager />} />
+        {/* PRODUCTOS */}
+        <Route path='productos' element={<ProductManager />} />
+        {/* MARCAS */}
+        <Route path='marcas' element={<MarcaManager />} />
       </Route>
       {/* Redirección para cualquier otra ruta */}
       <Route path='*' element={<Navigate to='/dashboard' replace />} />
