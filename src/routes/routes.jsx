@@ -6,6 +6,7 @@ import UserRoutes from './UserRutes'
 import { PWAInstaller } from '../components/PwaInstaller'
 import { NetworkStatus } from '../components/NetWorkStatus'
 import { useEffect, useState } from 'react'
+import { SyncStatus } from '../components/SyncStatus'
 
 export default function AppRoutes() {
   const { isAuthenticated, loading, user } = useAuth()
@@ -85,6 +86,7 @@ export default function AppRoutes() {
       {renderContent()}
       <PWAInstaller />
       <NetworkStatus />
+      <SyncStatus />
     </>
   )
 }
