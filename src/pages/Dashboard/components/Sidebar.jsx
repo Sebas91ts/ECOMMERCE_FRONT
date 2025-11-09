@@ -40,6 +40,12 @@ const baseMenuItems = [
     ]
   },
   {
+    id: 'usuarios',
+    icon: User,
+    label: 'Usuarios',
+    path: '/dashboard/usuarios'
+  },
+  {
     id: 'categorias',
     icon: Tags,
     label: 'Categorias',

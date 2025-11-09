@@ -9,6 +9,7 @@ import CategoryManager from '../pages/Categorias/CategoryManager'
 import SubcategoryManager from '../pages/Categorias/SubcategoryManager'
 import ProductManager from '../pages/Productos/ProductManager'
 import MarcaManager from '../pages/Marcas/MarcaManager'
+import UserManagementPage from '../pages/Usuarios/UserManagementPage'
 export default function AdminRoutes() {
   return (
     <Routes>
@@ -32,6 +33,8 @@ export default function AdminRoutes() {
         <Route path='productos' element={<ProductManager />} />
         {/* MARCAS */}
         <Route path='marcas' element={<MarcaManager />} />
+        {/* USUARIOS */}
+        <Route path='usuarios' element={<UserManagementPage />} />
       </Route>
       {/* Redirección para cualquier otra ruta */}
       <Route path='*' element={<Navigate to='/dashboard' replace />} />

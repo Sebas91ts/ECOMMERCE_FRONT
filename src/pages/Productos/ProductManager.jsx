@@ -27,34 +27,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
-
-// --- Componente de Notificación Simple ---
-const Notification = ({ message, type, onClose }) => {
-  const baseStyle =
-    'p-4 rounded-lg shadow-md mb-4 flex justify-between items-center'
-  let colorStyle = ''
-
-  switch (type) {
-    case 'success':
-      colorStyle = 'bg-green-100 border-l-4 border-green-500 text-green-700'
-      break
-    case 'error':
-      colorStyle = 'bg-red-100 border-l-4 border-red-500 text-red-700'
-      break
-    default:
-      colorStyle = 'bg-blue-100 border-l-4 border-blue-500 text-blue-700'
-  }
-
-  return (
-    <div className={`${baseStyle} ${colorStyle}`}>
-      <span>{message}</span>
-      <button onClick={onClose} className='text-gray-500 hover:text-gray-700'>
-        <X size={18} />
-      </button>
-    </div>
-  )
-}
-
+import Notification from '../../components/Notification'
 // --- Componente de Paginación ---
 const Pagination = ({ pagination, onPageChange }) => {
   if (!pagination || pagination.total_pages <= 1) return null
@@ -466,8 +439,8 @@ const ProductManager = () => {
   return (
     <div className='py-2'>
       <h1 className='text-3xl font-bold text-gray-900 mb-2 tracking-tight flex items-center'>
-        <Package size={28} className='mr-3 text-indigo-600' /> Gestión Gestión
-        de Productos
+        <Package size={28} className='mr-3 text-indigo-600' /> Gestión de
+        Productos
       </h1>
       <p className='text-gray-600 mb-8 max-w-3xl text-sm'>
         Administra el inventario de electrodomésticos, incluyendo precios, stock
