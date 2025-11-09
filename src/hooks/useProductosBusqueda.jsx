@@ -1,9 +1,5 @@
 import { useState, useEffect } from 'react'
 import { buscarProductos } from '../api/productos/busqueda'
-import { useOfflineData } from './useOfflineData'
-
-// Cache por 5 minutos
-const CACHE_DURATION = 5 * 60 * 1000
 
 export const useProductosBusqueda = (initialFilters = {}) => {
   const [productos, setProductos] = useState([])
