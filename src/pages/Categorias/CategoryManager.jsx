@@ -146,6 +146,19 @@ const CategoryManager = () => {
     }
   }
 
+  // En cualquier componente, añade:
+  useEffect(() => {
+    const checkApiCache = async () => {
+      const cache = await caches.open('api-data')
+      const requests = await cache.keys()
+      console.log(
+        '📊 APIs en caché:',
+        requests.map((req) => req.url)
+      )
+    }
+    checkApiCache()
+  }, [])
+
   // --- Estructura Visual ---
   return (
     <div className='max-w-7xl mx-auto sm:px-6 lg:px-8'>

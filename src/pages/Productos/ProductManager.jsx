@@ -466,8 +466,8 @@ const ProductManager = () => {
   return (
     <div className='py-2'>
       <h1 className='text-3xl font-bold text-gray-900 mb-2 tracking-tight flex items-center'>
-        <Package size={28} className='mr-3 text-indigo-600' /> Gestión de
-        Productos
+        <Package size={28} className='mr-3 text-indigo-600' /> Gestión Gestión
+        de Productos
       </h1>
       <p className='text-gray-600 mb-8 max-w-3xl text-sm'>
         Administra el inventario de electrodomésticos, incluyendo precios, stock

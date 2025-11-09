@@ -124,11 +124,11 @@ export const AuthProvider = ({ children }) => {
 
   // Guardar en localStorage cuando cambie el estado de auth
   useEffect(() => {
-    console.log('Auth state changed:', {
-      isAuthenticated: state.isAuthenticated,
-      user: state.user,
-      accessToken: state.accessToken
-    })
+    // console.log('Auth state changed:', {
+    //   isAuthenticated: state.isAuthenticated,
+    //   user: state.user,
+    //   accessToken: state.accessToken
+    // })
 
     if (state.isAuthenticated && state.user && state.accessToken) {
       const authData = {
