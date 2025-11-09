@@ -6,16 +6,16 @@ import { usePrivilegios } from '../../../hooks/usePrivilegio'
 import {
   Home,
   Settings,
-  FileText,
-  MessageSquare,
+  ListTree,
   Building,
   ChevronRight,
   Menu,
   User,
   LogOut,
-  ClipboardList,
+  Tags,
   X,
-  TrendingUp
+  TrendingUp,
+  Landmark
 } from 'lucide-react'
 
 // Menú base
@@ -38,6 +38,30 @@ const baseMenuItems = [
         path: '/dashboard/permisos/componentes'
       }
     ]
+  },
+  {
+    id: 'categorias',
+    icon: Tags,
+    label: 'Categorias',
+    path: '/dashboard/categorias'
+  },
+  {
+    id: 'subcategorias',
+    icon: ListTree,
+    label: 'Subcategorias',
+    path: '/dashboard/subcategorias'
+  },
+  {
+    id: 'productos',
+    icon: TrendingUp,
+    label: 'Productos',
+    path: '/dashboard/productos'
+  },
+  {
+    id: 'marcas',
+    icon: Landmark,
+    label: 'Marcas',
+    path: '/dashboard/marcas'
   }
 ]
 
@@ -108,8 +132,7 @@ export default function Sidebar() {
           </div>
           {sidebarOpen && (
             <div>
-              <h1 className='text-xl font-bold text-gray-900'>Inmobiliaria</h1>
-              <p className='text-xs text-gray-500'>Panel de administración</p>
+              <h1 className='text-xl font-bold text-gray-900'>SmartSales</h1>
             </div>
           )}
         </div>
