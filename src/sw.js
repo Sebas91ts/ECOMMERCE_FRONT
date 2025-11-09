@@ -1,20 +1,23 @@
 // src/sw.js
 import { precacheAndRoute } from 'workbox-precaching'
 
+// Precache los archivos estáticos de Workbox
 precacheAndRoute(self.__WB_MANIFEST)
 
-// Estrategia para APIs - INCLUYENDO origen cruzado
+console.log('[SW] ✅ Service Worker loaded in production')
+
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
-  console.log('[SW] Intercepting request:', request.url, request.method)
 
-  // Solo manejar requests GET (ahora incluimos origen cruzado para APIs)
+  console.log('[SW] 🔄 Intercepting:', request.url, request.method)
+
+  // Solo manejar requests GET
   if (request.method !== 'GET') {
     return
   }
 
-  // ESTRATEGIA PARA APIS (incluyendo APIs externas)
+  // ESTRATEGIA PARA APIS
   if (url.pathname.includes('/api/') || 
       url.href.includes('/producto/') || 
       url.href.includes('127.0.0.1:8000')) {
@@ -29,28 +32,24 @@ self.addEventListener('fetch', (event) => {
           
           // Solo cachear respuestas exitosas
           if (networkResponse.ok && networkResponse.status === 200) {
-            // Clonar la respuesta porque solo se puede leer una vez
             const responseClone = networkResponse.clone()
-            
-            // Crear una nueva request para cachear (sin credenciales para evitar problemas CORS)
             const cacheRequest = new Request(request.url, {
               headers: request.headers,
               method: 'GET'
             })
             
             cache.put(cacheRequest, responseClone)
-            console.log('[SW] API response cached:', request.url)
+            console.log('[SW] ✅ API response cached:', request.url)
           }
           
           return networkResponse
         } catch (error) {
           // Si falla la red, buscar en caché
-          console.log('[SW] Network failed, trying cache for:', request.url)
+          console.log('[SW] 🔴 Network failed, trying cache for:', request.url)
           const cachedResponse = await cache.match(request)
           
           if (cachedResponse) {
-            console.log('[SW] Serving API from cache:', request.url)
-            // Añadir header para identificar que son datos cacheados
+            console.log('[SW] ✅ Serving API from cache:', request.url)
             const headers = new Headers(cachedResponse.headers)
             headers.set('X-Offline-Cache', 'true')
             
@@ -82,21 +81,32 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Estrategia para HTML pages (mantener igual)
-  if (request.mode === 'navigate' && url.origin === self.location.origin) {
+  // Estrategia para HTML pages (navegación)
+  if (request.mode === 'navigate') {
     event.respondWith(
       (async () => {
         try {
+          // Primero intentar red para páginas
           const networkResponse = await fetch(request)
-          const cache = await caches.open('pages')
-          cache.put(request, networkResponse.clone())
+          
+          // Cachear la respuesta exitosa
+          if (networkResponse.ok) {
+            const cache = await caches.open('pages')
+            cache.put(request, networkResponse.clone())
+          }
+          
           return networkResponse
         } catch (error) {
+          // Si falla la red, buscar en caché
+          console.log('[SW] 🔴 Navigation failed, trying cache for:', request.url)
           const cachedResponse = await caches.match(request)
+          
           if (cachedResponse) {
-            console.log('[SW] Serving from cache:', request.url)
+            console.log('[SW] ✅ Serving page from cache:', request.url)
             return cachedResponse
           }
+          
+          // Si no hay en caché, devolver offline.html
           return caches.match('/offline.html')
         }
       })()
@@ -104,60 +114,80 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Para archivos estáticos del mismo origen
-  if (url.origin === self.location.origin &&
-      (request.destination === 'script' || 
-       request.destination === 'style' || 
-       request.destination === 'image' ||
-       request.url.includes('.js') ||
-       request.url.includes('.css'))) {
+  // PARA ARCHIVOS ESTÁTICOS (JS, CSS, imágenes) - DEJAR QUE WORKBOX LOS MANEJE
+  // No añadir event.respondWith() para estos, dejar que pase al precaching de Workbox
+  if (request.destination === 'script' || 
+      request.destination === 'style' || 
+      request.destination === 'image' ||
+      request.url.includes('.js') ||
+      request.url.includes('.css')) {
     
-    event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse
+    // IMPORTANTE: No interferir, dejar que Workbox maneje estos archivos
+    console.log('[SW] 📦 Static resource, letting Workbox handle:', request.url)
+    return
+  }
+
+  // Para cualquier otro recurso, usar cache primero
+  event.respondWith(
+    caches.match(request).then((cachedResponse) => {
+      if (cachedResponse) {
+        console.log('[SW] ✅ Serving from cache:', request.url)
+        return cachedResponse
+      }
+      
+      return fetch(request).then((response) => {
+        // Cachear respuesta exitosa
+        if (response.ok) {
+          const responseClone = response.clone()
+          caches.open('static').then((cache) => {
+            cache.put(request, responseClone)
+          })
         }
-        return fetch(request).then((response) => {
-          if (response.ok) {
-            const responseClone = response.clone()
-            caches.open('static').then((cache) => {
-              cache.put(request, responseClone)
-            })
-          }
-          return response
+        return response
+      }).catch(() => {
+        // Si falla, devolver error genérico
+        return new Response('Resource unavailable offline', { 
+          status: 503,
+          headers: { 'Content-Type': 'text/plain' }
         })
       })
-    )
-  }
+    })
+  )
 })
-// Cache inicial
+
+// Cache inicial de páginas HTML
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing...')
+  console.log('[SW] 🚀 Installing...')
   event.waitUntil(
     caches.open('pages').then((cache) => {
       return cache.addAll([
         '/',
-        '/login',
-        '/dashboard',
-        '/home'
-      ])
+        '/index.html',
+        '/offline.html'
+      ]).catch(err => {
+        console.log('[SW] ❌ Cache addAll error:', err)
+      })
     })
   )
 })
 
 // Limpiar caches viejos
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating...')
+  console.log('[SW] 🔥 Activating...')
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (!['pages', 'static', 'api-data'].includes(cacheName)) {
-            console.log('[SW] Deleting old cache:', cacheName)
+          if (!['pages', 'static', 'api-data'].includes(cacheName) && 
+              !cacheName.includes('workbox-precache')) {
+            console.log('[SW] 🗑️ Deleting old cache:', cacheName)
             return caches.delete(cacheName)
           }
         })
       )
+    }).then(() => {
+      console.log('[SW] ✅ Activation complete')
+      return self.clients.claim()
     })
   )
 })
