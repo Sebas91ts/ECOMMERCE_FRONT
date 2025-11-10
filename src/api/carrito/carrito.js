@@ -5,11 +5,11 @@ export const agregarProductoCarrito = async (productoData) => {
 }
 
 export const vaciarCarrito = async () => {
-    return instancia.post('venta/vaciar_carrito');
+    return instancia.patch('venta/vaciar_carrito');
 }
 
-export const eliminarProductoCarrito = async (productoId) => {
-    return instancia.post('venta/eliminar_producto_carrito', { producto_id: productoId });
+export const eliminarProductoCarrito = async (data) => {
+    return instancia.patch('venta/eliminar_producto_carrito', data);
 }
 
 export const generarPedido = async (pedidoData) => {

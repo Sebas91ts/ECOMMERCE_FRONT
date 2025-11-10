@@ -32,7 +32,7 @@ const CarritoPage = () => {
   }
 
   const handleEliminar = async (producto) => {
-    await eliminarDelCarrito(producto.producto_id)
+    await eliminarDelCarrito(producto.producto_id, -1)
   }
 
   if (loading) {

@@ -186,7 +186,7 @@ export const CarritoProvider = ({ children }) => {
     }
   }
 
-  // Eliminar producto del carrito
+  // Eliminar producto del carritos
   const eliminarDelCarrito = async (productoId, cantidad = -1) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true })
@@ -197,7 +197,6 @@ export const CarritoProvider = ({ children }) => {
       })
 
       if (response?.data?.status === 1) {
-        // Actualizar estado local
         dispatch({
           type: 'REMOVE_ITEM',
           payload: {
@@ -216,6 +215,9 @@ export const CarritoProvider = ({ children }) => {
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.message })
       return { success: false, message: error.message }
+    } finally {
+      // ✅ ESTO SE EJECUTA SIEMPRE, TANTO EN ÉXITO COMO EN ERROR
+      dispatch({ type: 'SET_LOADING', payload: false })
     }
   }
 
@@ -239,6 +241,8 @@ export const CarritoProvider = ({ children }) => {
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error.message })
       return { success: false, message: error.message }
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false })
     }
   }
 

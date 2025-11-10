@@ -4,13 +4,12 @@ import { precacheAndRoute } from 'workbox-precaching'
 // Precache los archivos estáticos de Workbox
 precacheAndRoute(self.__WB_MANIFEST)
 
-console.log('[SW] ✅ Service Worker loaded in production')
 
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  console.log('[SW] 🔄 Intercepting:', request.url, request.method)
+
 
   // Solo manejar requests GET
   if (request.method !== 'GET') {
@@ -39,17 +38,14 @@ self.addEventListener('fetch', (event) => {
             })
             
             cache.put(cacheRequest, responseClone)
-            console.log('[SW] ✅ API response cached:', request.url)
           }
           
           return networkResponse
         } catch (error) {
           // Si falla la red, buscar en caché
-          console.log('[SW] 🔴 Network failed, trying cache for:', request.url)
           const cachedResponse = await cache.match(request)
           
           if (cachedResponse) {
-            console.log('[SW] ✅ Serving API from cache:', request.url)
             const headers = new Headers(cachedResponse.headers)
             headers.set('X-Offline-Cache', 'true')
             
@@ -98,11 +94,9 @@ self.addEventListener('fetch', (event) => {
           return networkResponse
         } catch (error) {
           // Si falla la red, buscar en caché
-          console.log('[SW] 🔴 Navigation failed, trying cache for:', request.url)
           const cachedResponse = await caches.match(request)
           
           if (cachedResponse) {
-            console.log('[SW] ✅ Serving page from cache:', request.url)
             return cachedResponse
           }
           
@@ -123,7 +117,6 @@ self.addEventListener('fetch', (event) => {
       request.url.includes('.css')) {
     
     // IMPORTANTE: No interferir, dejar que Workbox maneje estos archivos
-    console.log('[SW] 📦 Static resource, letting Workbox handle:', request.url)
     return
   }
 
@@ -131,7 +124,6 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
-        console.log('[SW] ✅ Serving from cache:', request.url)
         return cachedResponse
       }
       
@@ -157,7 +149,6 @@ self.addEventListener('fetch', (event) => {
 
 // Cache inicial de páginas HTML
 self.addEventListener('install', (event) => {
-  console.log('[SW] 🚀 Installing...')
   event.waitUntil(
     caches.open('pages').then((cache) => {
       return cache.addAll([
@@ -165,7 +156,6 @@ self.addEventListener('install', (event) => {
         '/index.html',
         '/offline.html'
       ]).catch(err => {
-        console.log('[SW] ❌ Cache addAll error:', err)
       })
     })
   )
@@ -173,20 +163,17 @@ self.addEventListener('install', (event) => {
 
 // Limpiar caches viejos
 self.addEventListener('activate', (event) => {
-  console.log('[SW] 🔥 Activating...')
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (!['pages', 'static', 'api-data'].includes(cacheName) && 
               !cacheName.includes('workbox-precache')) {
-            console.log('[SW] 🗑️ Deleting old cache:', cacheName)
             return caches.delete(cacheName)
           }
         })
       )
     }).then(() => {
-      console.log('[SW] ✅ Activation complete')
       return self.clients.claim()
     })
   )

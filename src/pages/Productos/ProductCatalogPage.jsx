@@ -18,6 +18,7 @@ import {
 } from '../../api/productos/productoService'
 import { useApi } from '../../hooks/useApi'
 import { useProductosBusqueda } from '../../hooks/useProductosBusqueda'
+import { useCarrito } from '../../contexts/CarritoContext'
 
 const ProductCatalogPage = () => {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -36,7 +37,61 @@ const ProductCatalogPage = () => {
     max_precio: '',
     en_stock: ''
   })
+  const [notification, setNotification] = useState({
+    show: false,
+    message: '',
+    type: ''
+  })
+  const { agregarAlCarrito, estaEnCarrito, cantidadEnCarrito } = useCarrito()
 
+  // 🔥 AGREGAR: Función para manejar agregar al carrito
+  const handleAddToCart = async (productoId) => {
+    try {
+      const resultado = await agregarAlCarrito(productoId, 1)
+
+      if (resultado.success) {
+        // Mostrar notificación de éxito
+        setNotification({
+          show: true,
+          message: resultado.message || 'Producto agregado al carrito',
+          type: 'success'
+        })
+
+        // Ocultar notificación después de 3 segundos
+        setTimeout(() => {
+          setNotification({ show: false, message: '', type: '' })
+        }, 3000)
+      } else {
+        // Mostrar notificación de error
+        setNotification({
+          show: true,
+          message: resultado.message || 'Error al agregar al carrito',
+          type: 'error'
+        })
+
+        setTimeout(() => {
+          setNotification({ show: false, message: '', type: '' })
+        }, 3000)
+      }
+    } catch (error) {
+      setNotification({
+        show: true,
+        message: 'Error al agregar al carrito',
+        type: 'error'
+      })
+
+      setTimeout(() => {
+        setNotification({ show: false, message: '', type: '' })
+      }, 3000)
+    }
+  }
+
+  // 🔥 AGREGAR: Función para ver detalle del producto
+  const handleViewDetail = (productoId) => {
+    // Por ahora navega al catálogo con el producto seleccionado
+    // Más adelante puedes crear una página de detalle específica
+    navigate(`/catalogo?search=${productoId}`)
+  }
   // Obtener filtros de la URL
   const getFiltersFromURL = () => {
     const urlFilters = {
@@ -263,7 +318,7 @@ const ProductCatalogPage = () => {
   }, [localFilters])
 
   // Componente de Producto
-  const ProductoCard = ({ producto, onAddToCart, onClickDetail }) => (
+  const ProductoCard = ({ producto }) => (
     <div
       className='
             relative bg-white/80 backdrop-blur-sm text-gray-800 rounded-lg 
@@ -275,7 +330,7 @@ const ProductCatalogPage = () => {
       {/* Imagen */}
       <div
         className='h-40 sm:h-48 bg-gray-50 rounded-t-lg flex items-center justify-center overflow-hidden cursor-pointer'
-        onClick={() => onClickDetail(producto.id)}
+        onClick={() => handleViewDetail(producto.id)}
       >
         {producto.imagenes?.[0] ? (
           <img
@@ -295,7 +350,7 @@ const ProductCatalogPage = () => {
       <div className='p-3 flex flex-col flex-grow text-sm'>
         <h3
           className='font-semibold text-gray-900 mb-1 line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors'
-          onClick={() => onClickDetail(producto.id)}
+          onClick={() => handleViewDetail(producto.id)}
         >
           {producto.nombre}
         </h3>
@@ -328,21 +383,48 @@ const ProductCatalogPage = () => {
             {producto.stock > 0 ? 'En Stock' : 'Agotado'}
           </span>
         </div>
+
+        {/* 🔥 AGREGAR: Indicador si ya está en el carrito */}
+        {estaEnCarrito(producto.id) && (
+          <div className='mt-2 flex items-center justify-center'>
+            <span className='text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-full flex items-center'>
+              <FiShoppingCart className='w-3 h-3 mr-1' />
+              En carrito: {cantidadEnCarrito(producto.id)}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Botones de Acción (Añadir al Carrito y Ver Detalle) */}
       <div className='flex border-t border-gray-100'>
         <button
-          className='flex-1 flex items-center justify-center gap-1 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors'
-          onClick={() => onAddToCart(producto.id)} // Asume que tienes una función para añadir al carrito
+          className={`flex-1 flex items-center justify-center gap-1 py-2 text-sm font-medium transition-colors ${
+            producto.stock === 0
+              ? 'text-gray-400 cursor-not-allowed bg-gray-50'
+              : 'text-blue-600 hover:bg-blue-50'
+          } ${
+            estaEnCarrito(producto.id)
+              ? 'bg-green-50 text-green-600 hover:bg-green-100'
+              : ''
+          }`}
+          onClick={() => handleAddToCart(producto.id)}
           disabled={producto.stock === 0}
+          title={
+            producto.stock === 0 ? 'Producto agotado' : 'Agregar al carrito'
+          }
         >
           <FiShoppingCart className='w-4 h-4' />
-          <span>Añadir</span>
+          <span>
+            {producto.stock === 0
+              ? 'Agotado'
+              : estaEnCarrito(producto.id)
+              ? 'Agregado'
+              : 'Añadir'}
+          </span>
         </button>
         <button
           className='flex-1 flex items-center justify-center gap-1 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors border-l border-gray-100'
-          onClick={() => onClickDetail(producto.id)}
+          onClick={() => handleViewDetail(producto.id)}
         >
           <FiInfo className='w-4 h-4' />
           <span>Detalle</span>
@@ -351,8 +433,8 @@ const ProductCatalogPage = () => {
     </div>
   )
 
-  // Componente de Producto en Lista
-  const ProductoListItem = ({ producto, onAddToCart, onClickDetail }) => (
+  // Componente de Producto en Lista - ACTUALIZADO
+  const ProductoListItem = ({ producto }) => (
     <div
       className='
             bg-white/90 backdrop-blur-sm text-gray-800 rounded-lg 
@@ -360,7 +442,7 @@ const ProductCatalogPage = () => {
             hover:shadow-lg hover:border-blue-100 transition-all duration-300 
             p-4 mb-3 cursor-pointer
         '
-      onClick={() => onClickDetail(producto.id)}
+      onClick={() => handleViewDetail(producto.id)}
     >
       <div className='flex items-center gap-4 sm:gap-6'>
         {/* 1. Imagen (Pequeña y Contenida) */}
@@ -369,7 +451,7 @@ const ProductCatalogPage = () => {
             <img
               src={producto.imagenes[0].url_imagen}
               alt={producto.nombre}
-              className='h-full w-full object-contain p-1' // p-1 para mejor look clean
+              className='h-full w-full object-contain p-1'
             />
           ) : (
             <div className='text-gray-400 text-center p-2'>
@@ -378,7 +460,7 @@ const ProductCatalogPage = () => {
           )}
         </div>
 
-        {/* 2. Información Principal (Título y Descripción) */}
+        {/* 2. Información Principal */}
         <div className='flex-1 min-w-0'>
           <h3 className='text-base font-semibold text-gray-900 mb-1 line-clamp-1 hover:text-blue-600 transition-colors'>
             {producto.nombre}
@@ -387,7 +469,17 @@ const ProductCatalogPage = () => {
             {producto.descripcion}
           </p>
 
-          {/* Metadatos (Modelo / Garantía) - Visible solo en pantallas grandes */}
+          {/* 🔥 AGREGAR: Indicador si ya está en el carrito */}
+          {estaEnCarrito(producto.id) && (
+            <div className='mt-2 flex items-center'>
+              <span className='text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-full flex items-center'>
+                <FiShoppingCart className='w-3 h-3 mr-1' />
+                En carrito: {cantidadEnCarrito(producto.id)} unidades
+              </span>
+            </div>
+          )}
+
+          {/* Metadatos */}
           <div className='hidden lg:grid grid-cols-2 gap-4 text-xs pt-2 mt-2 border-t border-gray-100'>
             <div>
               <span className='text-gray-400 flex items-center'>
@@ -410,9 +502,8 @@ const ProductCatalogPage = () => {
           </div>
         </div>
 
-        {/* 3. Precios y Stock (Columna de Datos Central) */}
+        {/* 3. Precios y Stock */}
         <div className='flex flex-col items-end flex-shrink-0 w-28 text-right'>
-          {/* Precio */}
           <span className='text-lg font-bold text-blue-600'>
             {formatPrice(producto.precio_contado)}
           </span>
@@ -421,7 +512,6 @@ const ProductCatalogPage = () => {
               12x {formatPrice(producto.precio_cuota)}
             </p>
           )}
-          {/* Stock Badge */}
           <span
             className={`text-xs mt-2 px-2 py-0.5 rounded-full flex items-center ${
               producto.stock > 0
@@ -438,15 +528,23 @@ const ProductCatalogPage = () => {
           </span>
         </div>
 
-        {/* 4. Acciones (Botones) */}
+        {/* 4. Acciones */}
         <div className='flex flex-col gap-2 flex-shrink-0'>
           <button
-            className='flex items-center justify-center p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:bg-gray-400'
+            className={`flex items-center justify-center p-2 rounded-md transition-colors ${
+              producto.stock === 0
+                ? 'bg-gray-400 text-white cursor-not-allowed'
+                : estaEnCarrito(producto.id)
+                ? 'bg-green-500 text-white hover:bg-green-600'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
             onClick={(e) => {
-              e.stopPropagation() // Evita que se active el onClick del div principal
-              onAddToCart(producto.id)
+              e.stopPropagation()
+              handleAddToCart(producto.id)
             }}
-            title='Añadir al carrito'
+            title={
+              producto.stock === 0 ? 'Producto agotado' : 'Agregar al carrito'
+            }
             disabled={producto.stock === 0}
           >
             <FiShoppingCart className='w-4 h-4' />
@@ -455,7 +553,7 @@ const ProductCatalogPage = () => {
             className='flex items-center justify-center p-2 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors'
             onClick={(e) => {
               e.stopPropagation()
-              onClickDetail(producto.id)
+              handleViewDetail(producto.id)
             }}
             title='Ver detalles'
           >
@@ -465,6 +563,30 @@ const ProductCatalogPage = () => {
       </div>
     </div>
   )
+
+  // 🔥 AGREGAR: Componente de notificación
+  const Notification = () => {
+    if (!notification.show) return null
+
+    return (
+      <div
+        className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm ${
+          notification.type === 'success'
+            ? 'bg-green-100 border border-green-400 text-green-800'
+            : 'bg-red-100 border border-red-400 text-red-800'
+        }`}
+      >
+        <div className='flex items-center'>
+          {notification.type === 'success' ? (
+            <FiCheckCircle className='w-5 h-5 mr-2' />
+          ) : (
+            <FiAlertCircle className='w-5 h-5 mr-2' />
+          )}
+          <span className='font-medium'>{notification.message}</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className='min-h-screen bg-gray-50'>
