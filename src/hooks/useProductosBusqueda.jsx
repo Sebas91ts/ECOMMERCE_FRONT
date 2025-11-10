@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { buscarProductos } from '../api/productos/busqueda'
+import { buscarProductos } from '../api/productos/producto'
 
 export const useProductosBusqueda = (initialFilters = {}) => {
   const [productos, setProductos] = useState([])

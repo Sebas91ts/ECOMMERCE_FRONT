@@ -104,7 +104,7 @@ const ProductManager = () => {
     marca: '',
     activos: true,
     page: 1,
-    page_size: 10
+    page_size: 6
   })
   const [pagination, setPagination] = useState(null)
 
@@ -252,7 +252,7 @@ const ProductManager = () => {
       marca: '',
       activos: true,
       page: 1,
-      page_size: 20
+      page_size: 6
     }
     setFilters(nuevosFiltros)
     buscarProductosConFiltros(nuevosFiltros)
