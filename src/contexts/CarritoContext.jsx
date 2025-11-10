@@ -262,23 +262,41 @@ export const CarritoProvider = ({ children }) => {
       const response = await createOrder(pedidoData)
 
       if (response?.data?.status === 1) {
-        // Limpiar carrito después de generar pedido
-        dispatch({ type: 'CLEAR_CARRITO' })
+        // ✅ Devolver más información del pedido
         return {
           success: true,
           message: response.data.message,
-          pedidoId: response.data.values.pedido_id
+          values: response.data.values // ← Incluir estado, total, etc.
         }
       } else {
-        dispatch({
-          type: 'SET_ERROR',
-          payload: response?.data?.message || 'Error al generar pedido'
-        })
-        return { success: false, message: response?.data?.message }
+        // ✅ Mejor manejo de errores específicos
+        const errorMessage =
+          response?.data?.message || 'Error al generar pedido'
+        dispatch({ type: 'SET_ERROR', payload: errorMessage })
+        return {
+          success: false,
+          message: errorMessage,
+          errorType: response?.data?.error // ← Tipo de error si existe
+        }
       }
     } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: error.message })
-      return { success: false, message: error.message }
+      console.error('❌ Error en generarElPedido:', error)
+
+      // ✅ Manejar diferentes tipos de errores
+      let errorMessage = 'Error de conexión'
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error.message.includes('Network Error')) {
+        errorMessage = 'Error de conexión con el servidor'
+      }
+
+      dispatch({ type: 'SET_ERROR', payload: errorMessage })
+      return {
+        success: false,
+        message: errorMessage
+      }
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false })
     }
   }
 

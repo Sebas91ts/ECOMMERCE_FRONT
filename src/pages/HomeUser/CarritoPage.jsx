@@ -240,12 +240,15 @@ const CarritoPage = () => {
                   </div>
                 </div>
 
-                <button className='w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold mb-4'>
+                <Link
+                  to='/home/checkout'
+                  className='w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold text-center block'
+                >
                   Proceder al Pago
-                </button>
+                </Link>
 
                 <Link
-                  to='/catalogo'
+                  to='/home/catalogo'
                   className='w-full border border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-50 transition-colors font-medium text-center block'
                 >
                   Seguir Comprando
