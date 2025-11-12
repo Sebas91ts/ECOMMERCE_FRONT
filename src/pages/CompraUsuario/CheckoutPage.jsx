@@ -4,6 +4,7 @@ import { useCarrito } from '../../contexts/CarritoContext'
 import { useApi } from '../../hooks/useApi'
 import { listarFormasPagoActivasUsuario } from '../../api/carrito/carrito'
 import { CreditCard, Shield, Truck, ArrowLeft } from 'lucide-react'
+import StripeCheckout from '../../components/StripeCheckout'
 
 const CheckoutPage = () => {
   const navigate = useNavigate()
@@ -31,22 +32,30 @@ const CheckoutPage = () => {
     }
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!selectedFormaPago) {
-      setError('Por favor selecciona una forma de pago')
-      return
-    }
+  //STRIPE
+  const handleStripeSuccess = (sessionId) => {
+    // El pago fue exitoso, ahora generar el pedido
+    generarPedidoDespuesDePago(selectedFormaPago, sessionId)
+  }
 
-    setLoading(true)
-    setError('')
+  const handleStripeError = (errorMessage) => {
+    setError(errorMessage)
+  }
 
+  const handleStripeCancel = () => {
+    navigate('/home/carrito')
+  }
+
+  const generarPedidoDespuesDePago = async (formaPagoId, sessionId = null) => {
     try {
-      const formaPago = formasPago.find((fp) => fp.id == selectedFormaPago)
+      setLoading(true)
+      setError('')
 
-      // Validar meses de crédito
+      const formaPago = formasPago.find((fp) => fp.id == formaPagoId)
+
+      // Validar meses de crédito para crédito normal
       let meses = null
-      if (formaPago?.nombre.toLowerCase() === 'credito') {
+      if (formaPago?.nombre.toLowerCase() === 'credito' && !sessionId) {
         if (!mesesCredito) {
           setError('Debe seleccionar los meses de crédito')
           setLoading(false)
@@ -55,7 +64,7 @@ const CheckoutPage = () => {
         meses = mesesCredito
       }
 
-      const resultado = await generarElPedido(selectedFormaPago, meses)
+      const resultado = await generarElPedido(formaPagoId, meses, sessionId)
 
       if (resultado.success) {
         // ✅ Manejar diferentes estados del pedido
@@ -80,6 +89,22 @@ const CheckoutPage = () => {
     }
   }
 
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!selectedFormaPago) {
+      setError('Por favor selecciona una forma de pago')
+      return
+    }
+
+    // Para métodos que no son Stripe, procesar directamente
+    const selectedPago = formasPago.find((fp) => fp.id == selectedFormaPago)
+
+    if (!selectedPago?.nombre.toLowerCase().includes('tarjeta')) {
+      await generarPedidoDespuesDePago(selectedFormaPago)
+    }
+    // Para Stripe, el proceso se maneja en el componente StripeCheckout
+  }
+
   const formatPrice = (price) => {
     return new Intl.NumberFormat('es-BO', {
       style: 'currency',
@@ -89,6 +114,7 @@ const CheckoutPage = () => {
 
   const selectedPago = formasPago.find((fp) => fp.id == selectedFormaPago)
   const esCredito = selectedPago?.nombre.toLowerCase() === 'credito'
+  const esStripe = selectedPago?.nombre.toLowerCase().includes('tarjeta')
 
   if (!carrito || productos.length === 0) {
     return (
@@ -215,6 +241,18 @@ const CheckoutPage = () => {
                   </div>
                 )}
 
+                {/* Componente Stripe para tarjetas */}
+                {esStripe && selectedFormaPago && (
+                  <div className='mt-6'>
+                    <StripeCheckout
+                      formaPagoId={selectedFormaPago}
+                      onSuccess={handleStripeSuccess}
+                      onError={handleStripeError}
+                      onCancel={handleStripeCancel}
+                    />
+                  </div>
+                )}
+
                 {/* Información de Seguridad */}
                 <div className='bg-green-50 p-4 rounded-lg border border-green-200'>
                   <div className='flex items-center'>
@@ -228,16 +266,18 @@ const CheckoutPage = () => {
                   </p>
                 </div>
 
-                {/* Botón de Confirmación */}
-                <button
-                  type='submit'
-                  disabled={loading}
-                  className='w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed'
-                >
-                  {loading
-                    ? 'Procesando...'
-                    : `Confirmar Pedido - ${formatPrice(carrito.total)}`}
-                </button>
+                {/* Botón de Confirmación - Solo mostrar para métodos que no son Stripe */}
+                {!esStripe && selectedFormaPago && (
+                  <button
+                    type='submit'
+                    disabled={loading}
+                    className='w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed'
+                  >
+                    {loading
+                      ? 'Procesando...'
+                      : `Confirmar Pedido - ${formatPrice(carrito.total)}`}
+                  </button>
+                )}
 
                 {error && (
                   <div className='bg-red-50 border border-red-200 rounded-lg p-4'>

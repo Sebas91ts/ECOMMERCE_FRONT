@@ -5,7 +5,7 @@ export const agregarProductoCarrito = async (productoData) => {
 }
 
 export const vaciarCarrito = async () => {
-    return instancia.patch('venta/vaciar_carrito');
+    return instancia.delete('venta/vaciar_carrito');
 }
 
 export const eliminarProductoCarrito = async (data) => {
@@ -18,4 +18,8 @@ export const generarPedido = async (pedidoData) => {
 
 export const obtenerMiCarrito = async () => {
     return instancia.get('venta/obtener_mi_carrito');
+}
+
+export const listarFormasPagoActivasUsuario = async () => {
+    return instancia.get('venta/listar_formas_pago_activas_usuario');
 }
