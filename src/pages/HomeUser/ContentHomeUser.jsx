@@ -1,264 +1,395 @@
-import React, { useState, useEffect } from 'react'
-
-// --- Simulamos un hook de temporizador para la oferta del día ---
-const useCountdown = (targetDate) => {
-  const countDownDate = new Date(targetDate).getTime()
-  const [countDown, setCountDown] = useState(
-    countDownDate - new Date().getTime()
-  )
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCountDown(countDownDate - new Date().getTime())
-    }, 1000)
-
-    return () => clearInterval(interval)
-  }, [countDownDate])
-
-  return getReturnValues(countDown)
-}
-
-const getReturnValues = (countDown) => {
-  // Calcula tiempo restante
-  const hours = Math.floor(
-    (countDown % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-  )
-  const minutes = Math.floor((countDown % (1000 * 60 * 60)) / (1000 * 60))
-  const seconds = Math.floor((countDown % (1000 * 60)) / 1000)
-
-  return [hours, minutes, seconds]
-}
-
-// --- Datos de ejemplo adaptados ---
-const categories = [
-  {
-    name: 'Refrigeración',
-    description: 'Neveras y congeladores de última tecnología.',
-    href: '/category/refrigeracion'
-  },
-  {
-    name: 'Lavado & Secado',
-    description: 'Soluciones eficientes para el cuidado de tu ropa.',
-    href: '/category/lavado'
-  },
-  {
-    name: 'Cocina Profesional',
-    description: 'Hornos, encimeras y campanas extractoras.',
-    href: '/category/cocina'
-  }
-]
-
-const featuredProducts = [
-  {
-    id: 101,
-    name: 'Refrigerador Inverter X3000',
-    price: '$999',
-    oldPrice: '$1199',
-    brand: 'Electra'
-  },
-  {
-    id: 102,
-    name: 'Centro de Lavado Inteligente',
-    price: '$549',
-    oldPrice: '$650',
-    brand: 'CleanMax'
-  },
-  {
-    id: 103,
-    name: 'Horno de Convección Serie 7',
-    price: '$780',
-    oldPrice: '$890',
-    brand: 'GourmetPro'
-  },
-  {
-    id: 104,
-    name: 'Smart TV OLED 75" Zero Frame',
-    price: '$1999',
-    oldPrice: '$2400',
-    brand: 'VisionStream'
-  }
-]
-
-// La oferta del día dura 24 horas a partir de ahora (simulación)
-const tomorrow = new Date()
-tomorrow.setDate(tomorrow.getDate() + 1)
+import { useState, useEffect } from 'react'
+import {
+  Search,
+  ShoppingCart,
+  Star,
+  Truck,
+  Shield,
+  ArrowRight
+} from 'lucide-react'
+import {
+  getCategoriasActivas,
+  getMarcasActivas,
+  getSubcategoriasActivas,
+  buscarProductos
+} from '../../api/productos/productoService'
+import { useApi } from '../../hooks/useApi'
+import { useNavigate } from 'react-router-dom'
 
 const HomePage = () => {
-  // Uso del temporizador simulado
-  const [hours, minutes, seconds] = useCountdown(tomorrow)
+  const navigate = useNavigate()
+  const [categorias, setCategorias] = useState([])
+  const [marcas, setMarcas] = useState([])
+  const [productosDestacados, setProductosDestacados] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedCategoria, setSelectedCategoria] = useState('')
+  const [selectedMarca, setSelectedMarca] = useState('')
 
-  // Componente del contador para renderizar el tiempo
-  const CountdownDisplay = ({ value, label }) => (
-    <div className='text-center'>
-      <div className='text-3xl font-extrabold text-white bg-gray-900 p-2 rounded-lg leading-none'>
-        {String(value).padStart(2, '0')}
-      </div>
-      <span className='text-xs font-medium text-gray-500 mt-1 block uppercase'>
-        {label}
-      </span>
-    </div>
-  )
+  const { execute: fetchCategorias, loading: loadingCategorias } =
+    useApi(getCategoriasActivas)
+  const { execute: fetchMarcas, loading: loadingMarcas } =
+    useApi(getMarcasActivas)
+  const { execute: fetchProductos, loading: loadingProductos } =
+    useApi(buscarProductos)
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    loadCategorias()
+    loadMarcas()
+    loadProductosDestacados()
+  }, [])
+
+  const loadCategorias = async () => {
+    try {
+      const response = await fetchCategorias()
+      if (response?.data?.values?.categorias) {
+        setCategorias(response.data.values.categorias)
+      }
+    } catch (error) {
+      console.error('Error cargando categorías:', error)
+    }
+  }
+
+  const loadMarcas = async () => {
+    try {
+      const response = await fetchMarcas()
+      if (response?.data?.values?.marcas) {
+        setMarcas(response.data.values.marcas)
+      }
+    } catch (error) {
+      console.error('Error cargando marcas:', error)
+    }
+  }
+
+  const loadProductosDestacados = async () => {
+    try {
+      const response = await fetchProductos({
+        page_size: 8,
+        en_stock: 'true'
+      })
+      if (response?.data?.values?.productos) {
+        setProductosDestacados(response.data.values.productos)
+      }
+    } catch (error) {
+      console.error('Error cargando productos destacados:', error)
+    }
+  }
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+
+    // Construir URL con parámetros
+    const params = new URLSearchParams()
+    if (searchTerm) params.set('search', searchTerm)
+    if (selectedCategoria) params.set('categoria', selectedCategoria)
+    if (selectedMarca) params.set('marca', selectedMarca)
+
+    navigate(`/catalogo?${params.toString()}`)
+  }
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('es-BO', {
+      style: 'currency',
+      currency: 'BOB'
+    }).format(price)
+  }
 
   return (
-    <div className='min-h-screen bg-white'>
-      <main>
-        {/* --- 1. Hero Section (Banner Principal) --- */}
-        <section className='relative bg-gray-900 h-[70vh] flex items-center justify-start overflow-hidden border-b-4 border-teal-400'>
-          {/* Contenedor de la imagen a la derecha (simulación) */}
-          <div
-            className='absolute inset-0 left-1/2 bg-cover bg-center'
-            style={{
-              backgroundImage:
-                "url('ruta/a/imagen/electrodomestico-premium.jpg')"
-            }}
-          >
-            {/*  */}
-          </div>
-
-          <div className='relative max-w-7xl mx-auto px-8 w-1/2 min-w-[50%]'>
-            <h1 className='text-6xl md:text-8xl font-extrabold tracking-tight mb-4 text-white'>
-              <span className='text-teal-400'>DISEÑO</span> Y
-              <br />
-              RENDIMIENTO
+    <div className='min-h-screen bg-gray-50'>
+      {/* Hero Section */}
+      <section className='bg-gradient-to-r from-blue-600 to-purple-700 text-white'>
+        <div className='container mx-auto px-4 py-16'>
+          <div className='max-w-4xl mx-auto text-center'>
+            <h1 className='text-5xl font-bold mb-6'>
+              Bienvenido a <span className='text-yellow-300'>SmartSales</span>
             </h1>
-            <p className='text-xl font-light mb-10 opacity-80 text-gray-300 max-w-lg'>
-              Una colección curada de electrodomésticos de alto nivel para el
-              hogar contemporáneo.
+            <p className='text-xl mb-8 opacity-90'>
+              Los mejores electrodomésticos para tu hogar con precios increíbles
             </p>
-            <a
-              href='/new-collection'
-              className='bg-teal-400 text-gray-900 font-extrabold py-3 px-10 rounded-lg shadow-xl hover:bg-teal-300 transition duration-300 transform hover:translate-y-[-2px] uppercase tracking-wider text-base'
-            >
-              Ver Colección Premium
-            </a>
-          </div>
-        </section>
 
-        {/* --- 2. Sección de Oferta del Día con Temporizador --- */}
-        {hours > 0 || minutes > 0 || seconds > 0 ? (
-          <section className='bg-gray-100 py-12 px-4 sm:px-6 lg:px-8'>
-            <div className='max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center bg-white p-8 rounded-xl shadow-lg border-l-4 border-red-500'>
-              <div className='text-center md:text-left mb-6 md:mb-0'>
-                <p className='text-sm font-semibold text-red-600 uppercase mb-1'>
-                  Oferta Exclusiva
-                </p>
-                <h2 className='text-3xl font-bold text-gray-900'>
-                  Precio Flash: Refrigerador X3000
-                </h2>
-                <p className='text-xl mt-2 font-medium text-gray-600'>
-                  <span className='line-through text-gray-400 mr-2'>$1199</span>
-                  <span className='text-red-600 font-extrabold'>$999</span>
-                </p>
-              </div>
-              <div className='flex items-center space-x-6'>
-                <div className='flex space-x-3'>
-                  <CountdownDisplay value={hours} label='Hrs' />
-                  <CountdownDisplay value={minutes} label='Min' />
-                  <CountdownDisplay value={seconds} label='Seg' />
+            {/* Search Bar */}
+            <form
+              onSubmit={handleSearch}
+              className='bg-white rounded-lg p-2 shadow-lg'
+            >
+              <div className='flex flex-col md:flex-row gap-2'>
+                <div className='flex-1'>
+                  <div className='relative'>
+                    <Search className='w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
+                    <input
+                      type='text'
+                      placeholder='¿Qué electrodoméstico estás buscando?'
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className='w-full pl-10 pr-4 py-3 text-gray-800 rounded-lg border-0 focus:ring-2 focus:ring-blue-500'
+                    />
+                  </div>
                 </div>
-                <a
-                  href='/product/101'
-                  className='bg-red-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-red-700 transition duration-300 text-base shadow-md'
+
+                <select
+                  value={selectedCategoria}
+                  onChange={(e) => setSelectedCategoria(e.target.value)}
+                  className='px-4 py-3 text-gray-800 rounded-lg border-0 focus:ring-2 focus:ring-blue-500'
                 >
-                  ¡Comprar Ahora!
-                </a>
+                  <option value=''>Todas las categorías</option>
+                  {categorias.map((categoria) => (
+                    <option key={categoria.id} value={categoria.id}>
+                      {categoria.nombre}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={selectedMarca}
+                  onChange={(e) => setSelectedMarca(e.target.value)}
+                  className='px-4 py-3 text-gray-800 rounded-lg border-0 focus:ring-2 focus:ring-blue-500'
+                >
+                  <option value=''>Todas las marcas</option>
+                  {marcas.map((marca) => (
+                    <option key={marca.id} value={marca.id}>
+                      {marca.nombre}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type='submit'
+                  className='bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center'
+                >
+                  <Search className='w-5 h-5 mr-2' />
+                  Buscar
+                </button>
               </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className='py-12 bg-white'>
+        <div className='container mx-auto px-4'>
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-8'>
+            <div className='text-center'>
+              <div className='bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4'>
+                <Truck className='w-8 h-8 text-blue-600' />
+              </div>
+              <h3 className='text-lg font-semibold mb-2'>Envío Gratis</h3>
+              <p className='text-gray-600'>
+                En compras mayores a Bs 1000 en toda la ciudad
+              </p>
             </div>
-          </section>
-        ) : null}
 
-        {/* --- 3. Exploración por Categoría (Tarjetas con Hover) --- */}
-        <section
-          className={`py-20 px-4 sm:px-6 lg:px-8 ${hours > 0 ? '' : 'mt-12'}`}
-        >
-          <h2 className='text-4xl font-extrabold text-gray-900 text-center mb-16 tracking-tight'>
-            Explorar por Departamento
-          </h2>
-
-          <div className='max-w-7xl mx-auto grid grid-cols-1 gap-10 md:grid-cols-3'>
-            {categories.map((category) => (
-              <a
-                key={category.name}
-                href={category.href}
-                className='group relative rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition duration-500 transform hover:-translate-y-1'
-              >
-                {/* Simulación de Imagen con placeholder limpio */}
-                <div className='h-72 w-full bg-gray-100 flex items-center justify-center text-gray-600 text-lg'>
-                  [Image for {category.name}]
-                </div>
-
-                {/* Overlay minimalista */}
-                <div className='absolute inset-0 bg-gray-900 bg-opacity-30 group-hover:bg-opacity-70 transition duration-500 flex flex-col justify-end p-6'>
-                  <h3 className='text-2xl font-bold text-white mb-1 tracking-tight'>
-                    {category.name}
-                  </h3>
-                  <p className='text-sm text-gray-200 opacity-80'>
-                    {category.description}
-                  </p>
-                  <span className='mt-2 text-teal-400 text-sm font-semibold transition duration-500 opacity-0 group-hover:opacity-100'>
-                    Ver Gama Completa &rarr;
-                  </span>
-                </div>
-              </a>
-            ))}
-          </div>
-        </section>
-
-        {/* --- 4. Sección de Productos Destacados (Mini-Grid) --- */}
-        <section className='py-20 px-4 sm:px-6 lg:px-8 bg-gray-50 border-t border-b border-gray-200'>
-          <h2 className='text-4xl font-extrabold text-gray-900 text-center mb-12 tracking-tight'>
-            Selección Premium
-          </h2>
-
-          <div className='max-w-7xl mx-auto grid grid-cols-2 gap-8 md:grid-cols-4'>
-            {featuredProducts.map((product) => (
-              <div
-                key={product.id}
-                className='bg-white rounded-lg shadow-sm hover:shadow-lg transition duration-300 overflow-hidden'
-              >
-                <a href={`/product/${product.id}`}>
-                  <div className='h-40 w-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs p-3'>
-                    [Image of {product.name}]
-                  </div>
-                  <div className='p-4 text-center'>
-                    <p className='text-xs font-semibold text-gray-500 uppercase'>
-                      {product.brand}
-                    </p>
-                    <h3 className='text-md font-bold text-gray-800 mt-1 truncate'>
-                      {product.name}
-                    </h3>
-                    <p className='mt-2 text-sm line-through text-gray-400'>
-                      {product.oldPrice}
-                    </p>
-                    <p className='text-xl font-extrabold text-gray-900'>
-                      {product.price}
-                    </p>
-                  </div>
-                </a>
+            <div className='text-center'>
+              <div className='bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4'>
+                <Shield className='w-8 h-8 text-green-600' />
               </div>
-            ))}
-          </div>
-        </section>
+              <h3 className='text-lg font-semibold mb-2'>Garantía Extendida</h3>
+              <p className='text-gray-600'>
+                Hasta 24 meses de garantía en todos nuestros productos
+              </p>
+            </div>
 
-        {/* --- 5. Banner de Confianza y Calidad --- */}
-        <section className='bg-gray-900 py-16'>
-          <div className='max-w-5xl mx-auto text-center px-4'>
-            <h3 className='text-3xl md:text-4xl font-extrabold text-white mb-4 tracking-tight'>
-              Garantía de Dos Años en Toda la Gama
-            </h3>
-            <p className='text-gray-400 mb-8 text-lg font-light'>
-              Comprometidos con la durabilidad. Descubre nuestros términos de
-              soporte técnico y servicio post-venta.
-            </p>
-            <a
-              href='/support'
-              className='border-2 border-teal-400 text-teal-400 font-bold py-3 px-10 rounded-lg hover:bg-teal-400 hover:text-gray-900 transition duration-300 text-base uppercase'
-            >
-              Centro de Soporte
-            </a>
+            <div className='text-center'>
+              <div className='bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4'>
+                <Star className='w-8 h-8 text-purple-600' />
+              </div>
+              <h3 className='text-lg font-semibold mb-2'>Calidad Premium</h3>
+              <p className='text-gray-600'>
+                Productos de las mejores marcas del mercado
+              </p>
+            </div>
           </div>
-        </section>
-      </main>
+        </div>
+      </section>
+
+      {/* Categorías Section */}
+      <section className='py-16 bg-gray-50'>
+        <div className='container mx-auto px-4'>
+          <div className='flex justify-between items-center mb-8'>
+            <h2 className='text-3xl font-bold text-gray-900'>
+              Categorías Populares
+            </h2>
+            <button
+              onClick={() => navigate('/home/catalogo')}
+              className='text-blue-600 hover:text-blue-700 font-semibold flex items-center'
+            >
+              Ver todos <ArrowRight className='w-4 h-4 ml-1' />
+            </button>
+          </div>
+
+          <div className='grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6'>
+            {loadingCategorias
+              ? Array.from({ length: 6 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className='bg-white rounded-lg shadow-sm p-6 animate-pulse'
+                  >
+                    <div className='bg-gray-200 h-12 w-12 rounded-lg mx-auto mb-3'></div>
+                    <div className='bg-gray-200 h-4 rounded w-3/4 mx-auto'></div>
+                  </div>
+                ))
+              : categorias.slice(0, 6).map((categoria) => (
+                  <div
+                    key={categoria.id}
+                    className='bg-white rounded-lg shadow-sm p-6 text-center hover:shadow-md transition-shadow cursor-pointer'
+                  >
+                    <div className='bg-blue-100 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3'>
+                      <span className='text-blue-600 font-bold text-lg'>
+                        {categoria.nombre.charAt(0)}
+                      </span>
+                    </div>
+                    <h3 className='font-semibold text-gray-800'>
+                      {categoria.nombre}
+                    </h3>
+                  </div>
+                ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Productos Destacados */}
+      <section className='py-16 bg-white'>
+        <div className='container mx-auto px-4'>
+          <div className='flex justify-between items-center mb-8'>
+            <h2 className='text-3xl font-bold text-gray-900'>
+              Productos Destacados
+            </h2>
+            <button
+              onClick={() => navigate('/home/catalogo?en_stock=true')}
+              className='text-blue-600 hover:text-blue-700 font-semibold flex items-center'
+            >
+              Ver todos <ArrowRight className='w-4 h-4 ml-1' />
+            </button>
+          </div>
+
+          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'>
+            {loadingProductos
+              ? Array.from({ length: 8 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className='bg-white rounded-lg shadow-sm border animate-pulse'
+                  >
+                    <div className='bg-gray-200 h-48 rounded-t-lg'></div>
+                    <div className='p-4'>
+                      <div className='bg-gray-200 h-4 rounded w-3/4 mb-2'></div>
+                      <div className='bg-gray-200 h-4 rounded w-1/2 mb-3'></div>
+                      <div className='bg-gray-200 h-6 rounded w-1/3'></div>
+                    </div>
+                  </div>
+                ))
+              : productosDestacados.map((producto) => (
+                  <div
+                    key={producto.id}
+                    className='bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow'
+                  >
+                    <div className='h-48 bg-gray-100 rounded-t-lg flex items-center justify-center'>
+                      {producto.imagenes?.[0] ? (
+                        <img
+                          src={producto.imagenes[0].url_imagen}
+                          alt={producto.nombre}
+                          className='h-full w-full object-cover rounded-t-lg'
+                        />
+                      ) : (
+                        <div className='text-gray-400 text-center'>
+                          <ShoppingCart className='w-12 h-12 mx-auto mb-2' />
+                          <p className='text-sm'>Sin imagen</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className='p-4'>
+                      <h3 className='font-semibold text-gray-800 mb-2 line-clamp-2'>
+                        {producto.nombre}
+                      </h3>
+                      <p className='text-sm text-gray-600 mb-3 line-clamp-2'>
+                        {producto.descripcion}
+                      </p>
+
+                      <div className='flex items-center justify-between mb-3'>
+                        <span className='text-lg font-bold text-blue-600'>
+                          {formatPrice(producto.precio_contado)}
+                        </span>
+                        {producto.precio_cuota && (
+                          <span className='text-sm text-gray-500'>
+                            12x {formatPrice(producto.precio_cuota)}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className='flex items-center justify-between'>
+                        <span
+                          className={`text-sm font-medium ${
+                            producto.stock > 0
+                              ? 'text-green-600'
+                              : 'text-red-600'
+                          }`}
+                        >
+                          {producto.stock > 0 ? 'En stock' : 'Sin stock'}
+                        </span>
+                        <button className='bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold flex items-center'>
+                          <ShoppingCart className='w-4 h-4 mr-1' />
+                          Comprar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Marcas Section */}
+      <section className='py-16 bg-gray-50'>
+        <div className='container mx-auto px-4'>
+          <h2 className='text-3xl font-bold text-gray-900 text-center mb-12'>
+            Marcas Confiables
+          </h2>
+
+          <div className='grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8'>
+            {loadingMarcas
+              ? Array.from({ length: 6 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className='bg-white rounded-lg p-6 animate-pulse'
+                  >
+                    <div className='bg-gray-200 h-12 rounded w-full'></div>
+                  </div>
+                ))
+              : marcas.slice(0, 12).map((marca) => (
+                  <div
+                    key={marca.id}
+                    className='bg-white rounded-lg p-6 flex items-center justify-center hover:shadow-md transition-shadow'
+                  >
+                    <span className='text-gray-800 font-semibold text-center'>
+                      {marca.nombre}
+                    </span>
+                  </div>
+                ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter Section */}
+      <section className='bg-blue-600 text-white py-16'>
+        <div className='container mx-auto px-4 text-center'>
+          <h2 className='text-3xl font-bold mb-4'>
+            ¡No te pierdas las ofertas!
+          </h2>
+          <p className='text-xl mb-8 opacity-90'>
+            Suscríbete y recibe las mejores promociones en electrodomésticos
+          </p>
+          <div className='max-w-md mx-auto flex'>
+            <input
+              type='email'
+              placeholder='Tu correo electrónico'
+              className='flex-1 px-4 py-3 rounded-l-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500'
+            />
+            <button className='bg-yellow-400 text-blue-900 px-6 py-3 rounded-r-lg font-semibold hover:bg-yellow-300 transition-colors'>
+              Suscribirse
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }
